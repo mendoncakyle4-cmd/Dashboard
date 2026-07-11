@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SenseAI Ventures — Social Performance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#16121F; --violet:#5B3FE0; --violet-deep:#3D2899; --violet-soft:#EDE9FB;
+    --teal:#00B8A2; --gold:#F0A93E; --coral:#EF6461; --bg:#FAF8FF; --card:#FFFFFF;
+    --line:#E6E1F5; --muted:#6B6478; --muted-2:#9891A8; --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;}
+  body::before{
+    content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(circle at 10% 8%, rgba(91,63,224,0.07), transparent 40%),
+      radial-gradient(circle at 92% 4%, rgba(0,184,162,0.06), transparent 35%);
+    pointer-events:none; z-index:0;
+  }
+  header{
+    position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between;
+    padding:28px 40px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; gap:16px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand svg{width:34px;height:34px;display:block;}
+  .brand-text{line-height:1.05;}
+  .brand-text .name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; letter-spacing:-0.01em;}
+  .brand-text .sub{font-size:10.5px; letter-spacing:0.16em; color:var(--violet); font-weight:600; text-transform:uppercase;}
+  .header-right{display:flex; align-items:center; gap:14px;}
+  .pulse-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+  .pulse-label{font-size:11px;color:var(--muted-2);letter-spacing:0.08em;text-transform:uppercase;}
+  .pulse-svg{width:150px;height:22px;}
+
+  .filter-bar{
+    position:relative; z-index:2;
+    max-width:1320px; margin:0 auto; padding:20px 40px 0;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .filter-label{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em; font-weight:600; margin-right:4px;}
+  .preset-btn{
+    font-size:13px; font-weight:500; padding:8px 15px; border-radius:999px;
+    border:1px solid var(--line); background:var(--card); color:var(--ink);
+    cursor:pointer; transition:all .15s ease;
+  }
+  .preset-btn:hover{border-color:var(--violet);}
+  .preset-btn.active{background:var(--violet); border-color:var(--violet); color:#fff;}
+  .custom-range{display:flex; align-items:center; gap:6px; margin-left:6px;}
+  .custom-range input[type=date]{
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:7px 10px;
+    border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink);
+  }
+  .custom-range span{color:var(--muted-2); font-size:12px;}
+  .apply-btn{
+    font-size:13px; font-weight:600; padding:8px 16px; border-radius:999px;
+    border:1px solid var(--violet); background:var(--violet-soft); color:var(--violet-deep); cursor:pointer;
+  }
+  .apply-btn:hover{background:var(--violet); color:#fff;}
+  .range-summary{font-size:12px; color:var(--muted-2); margin-left:auto;}
+  .range-summary b{color:var(--violet-deep);}
+
+  main{position:relative; z-index:1; max-width:1320px; margin:0 auto; padding:20px 40px 80px;}
+  .section-title{display:flex; align-items:baseline; gap:12px; margin:52px 0 18px;}
+  .section-title .tri{width:0;height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:10px solid var(--violet); transform:translateY(-2px);}
+  .section-title h2{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; margin:0;}
+  .section-title p{margin:0; font-size:13px; color:var(--muted); font-weight:400;}
+  .section-title .divider{flex:1; height:1px; background:var(--line); margin-left:6px;}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:14px;}
+  .kpi-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 18px; position:relative; overflow:hidden;}
+  .kpi-card::after{content:""; position:absolute; left:0; right:0; bottom:0; height:3px; background:linear-gradient(90deg,var(--violet),var(--teal)); opacity:0.9;}
+  .kpi-card .label{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;}
+  .kpi-card .value{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; letter-spacing:-0.02em;}
+  .kpi-card .value span{font-size:14px; color:var(--muted-2); font-weight:500;}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .grid-3{display:grid; grid-template-columns:1.3fr 1fr; gap:20px;}
+  @media(max-width:980px){ .grid-2,.grid-3{grid-template-columns:1fr;} .kpi-grid{grid-template-columns:repeat(2,1fr);} .range-summary{margin-left:0; width:100%;} }
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px 18px;}
+  .card h3{font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; margin:0 0 2px;}
+  .card .desc{font-size:12px; color:var(--muted); margin:0 0 14px;}
+  .chart-box{position:relative; height:280px;}
+  .chart-box.tall{height:340px;}
+  .chart-box.short{height:220px;}
+  .empty-state{display:flex; align-items:center; justify-content:center; height:100%; color:var(--muted-2); font-size:13px; text-align:center; padding:20px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-weight:600; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; padding:8px 10px; border-bottom:1px solid var(--line);}
+  td{padding:10px 10px; border-bottom:1px solid #F1EEFA;}
+  tr:last-child td{border-bottom:none;}
+  .rank{display:inline-flex; align-items:center; justify-content:center; width:20px;height:20px;border-radius:50%; background:var(--violet-soft); color:var(--violet-deep); font-size:11px; font-weight:700; font-family:'JetBrains Mono',monospace;}
+  .er-pill{font-family:'JetBrains Mono',monospace; font-weight:600; padding:3px 9px; border-radius:999px; font-size:12px; display:inline-block;}
+  .er-high{background:rgba(0,184,162,0.14); color:#00816F;}
+  .er-mid{background:rgba(240,169,62,0.16); color:#9C6C0F;}
+  .er-low{background:rgba(239,100,97,0.13); color:#B23F3C;}
+
+  .heatmap-wrap{overflow-x:auto;}
+  .heatmap{border-collapse:collapse; width:100%; min-width:640px; font-size:11.5px;}
+  .heatmap th{white-space:nowrap; font-size:10.5px;}
+  .heatmap td{text-align:center; padding:9px 6px; font-family:'JetBrains Mono',monospace; border-bottom:1px solid #F1EEFA; font-weight:500;}
+  .heatmap td.daycell{text-align:left; font-family:'Inter',sans-serif; font-weight:600; color:var(--muted); font-size:12px;}
+  .heatmap td.empty{color:var(--muted-2); font-weight:400;}
+
+  footer{position:relative; z-index:1; text-align:center; padding:30px 20px 50px; font-size:12px; color:var(--muted-2); border-top:1px solid var(--line); margin-top:20px;}
+  footer .formula{display:inline-block; margin-top:8px; font-family:'JetBrains Mono',monospace; background:var(--violet-soft); color:var(--violet-deep); padding:6px 14px; border-radius:8px; font-size:12px;}
+  .legend-row{display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;}
+  .legend-item{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted);}
+  .legend-swatch{width:9px;height:9px;border-radius:2px;}
+  .data-note{font-size:11.5px; color:var(--muted-2); margin-top:10px; line-height:1.5;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 40 40" fill="none">
+      <path d="M20 4 L34 32 L6 32 Z" fill="none" stroke="#5B3FE0" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M20 14 L27 30 L13 30 Z" fill="#5B3FE0"/>
+    </svg>
+    <div class="brand-text">
+      <div class="name">SenseAI Ventures</div>
+      <div class="sub">Signal Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="pulse-wrap">
+      <span class="pulse-label">Live engagement signal</span>
+      <svg class="pulse-svg" viewBox="0 0 150 22"><polyline points="0,11 18,11 24,3 30,19 36,11 54,11 60,6 66,16 72,11 90,11 96,2 102,20 108,11 150,11" fill="none" stroke="#00B8A2" stroke-width="2"/></svg>
+    </div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <span class="filter-label">Date range</span>
+  <button class="preset-btn active" data-preset="all">All time</button>
+  <button class="preset-btn" data-preset="30">Last 30 days</button>
+  <button class="preset-btn" data-preset="90">Last 90 days</button>
+  <button class="preset-btn" data-preset="180">Last 6 months</button>
+  <div class="custom-range">
+    <input type="date" id="dateFrom" />
+    <span>→</span>
+    <input type="date" id="dateTo" />
+    <button class="apply-btn" id="applyCustom">Apply</button>
+  </div>
+  <span class="range-summary" id="rangeSummary"></span>
+</div>
+
+<main>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="section-title"><span class="tri"></span><h2>Format Performance</h2><p>Where volume goes vs. where engagement rate actually lives</p><span class="divider"></span></div>
+  <div class="grid-2">
+    <div class="card"><h3>Post Format — Volume Mix</h3><p class="desc" id="formatMixDesc">Share of posts by format</p><div class="chart-box"><canvas id="formatMixChart"></canvas></div></div>
+    <div class="card"><h3>ER by Post Format</h3><p class="desc">Engagement rate = Total Engagement ÷ Impressions</p><div class="chart-box"><canvas id="erByFormatChart"></canvas></div></div>
+  </div>
+
+  <div class="section-title"><span class="tri"></span><h2>Content Pillar Mix</h2><p>What we post about vs. what performs</p><span class="divider"></span></div>
+  <div class="grid-2">
+    <div class="card"><h3>Content Pillar — Volume Mix</h3><p class="desc" id="pillarMixDesc">Share of posts by content pillar</p><div class="chart-box"><canvas id="pillarMixChart"></canvas></div></div>
+    <div class="card"><h3>ER by Content Pillar</h3><p class="desc">Engagement rate per pillar, ranked</p><div class="chart-box"><canvas id="erByPillarChart"></canvas></div></div>
+  </div>
+
+  <div class="section-title"><span class="tri"></span><h2>What Actually Works</h2><p>Best format × pillar pairings and engagement composition</p><span class="divider"></span></div>
+  <div class="grid-3">
+    <div class="card">
+      <h3>Top Post Format × Content Pillar Combos</h3>
+      <p class="desc">Ranked by engagement rate in range</p>
+      <table><thead><tr><th>#</th><th>Format</th><th>Pillar</th><th style="text-align:right;">ER</th></tr></thead>
+      <tbody id="comboTableBody"></tbody></table>
+    </div>
+    <div class="card"><h3>Engagement Composition</h3><p class="desc">Likes / comments / reposts / clicks by format</p><div class="chart-box short"><canvas id="engagementTypeChart"></canvas></div></div>
+  </div>
+
+  <div class="section-title"><span class="tri"></span><h2>Receptivity — Time Heatmap</h2><p>Average ER by day of week × content pillar</p><span class="divider"></span></div>
+  <div class="card"><div class="heatmap-wrap"><table class="heatmap" id="heatmapTable"></table></div></div>
+
+  <div class="section-title"><span class="tri"></span><h2>Efficiency Matrix</h2><p>Engagement rate vs. impressions, bubble sized by total engagement</p><span class="divider"></span></div>
+  <div class="card">
+    <h3>ER vs. Impressions by Post</h3>
+    <p class="desc">Each bubble is one real post from the tracking sheet</p>
+    <div class="chart-box tall"><canvas id="efficiencyChart"></canvas></div>
+    <div class="legend-row" id="efficiencyLegend"></div>
+  </div>
+</main>
+
+<footer>
+  Built from SenseAI Ventures' complete LinkedIn tracking data (179 posts, Feb 2025 – Jul 2026).
+  <br/>Engagement Rate formula: <span class="formula">ER = SUM(Total Engagement) / SUM(Impressions)</span>
+  <div class="data-note">Impressions are as recorded in the source sheet; where a post had no impressions logged, it is estimated from Total Engagement ÷ that post's own ER. All figures above recompute live for the date range selected.</div>
+</footer>
+
+<script>const RAW=[{"date":"2026-07-02","format":"Static","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":13,"total":17,"impr":556},{"date":"2026-07-01","format":"Document","pillar":"Ecosystem Participation","likes":25,"comments":0,"reposts":0,"clicks":997,"total":1022,"impr":3628},{"date":"2026-07-01","format":"Document","pillar":"Portfolio Storytelling","likes":11,"comments":1,"reposts":0,"clicks":144,"total":156,"impr":422},{"date":"2026-06-25","format":"Static","pillar":"Portfolio Storytelling","likes":13,"comments":2,"reposts":0,"clicks":24,"total":39,"impr":708},{"date":"2026-06-23","format":"Static","pillar":"Portfolio Storytelling","likes":55,"comments":4,"reposts":1,"clicks":175,"total":235,"impr":3228},{"date":"2026-06-19","format":"Static","pillar":"Community Building","likes":45,"comments":2,"reposts":0,"clicks":2076,"total":2123,"impr":2593},{"date":"2026-06-15","format":"Document","pillar":"Portfolio Storytelling","likes":19,"comments":0,"reposts":2,"clicks":404,"total":425,"impr":971},{"date":"2026-06-12","format":"Static","pillar":"Portfolio Storytelling","likes":26,"comments":1,"reposts":0,"clicks":32,"total":59,"impr":891},{"date":"2026-06-11","format":"Static","pillar":"Portfolio Storytelling","likes":3,"comments":0,"reposts":0,"clicks":7,"total":10,"impr":272},{"date":"2026-06-09","format":"Static","pillar":"Ecosystem Participation","likes":8,"comments":1,"reposts":1,"clicks":15,"total":25,"impr":285},{"date":"2026-06-01","format":"Carousel","pillar":"SenseAI IP Launch","likes":3,"comments":1,"reposts":0,"clicks":60,"total":64,"impr":347},{"date":"2026-05-29","format":"Static","pillar":"SenseAI IP Launch","likes":5,"comments":0,"reposts":0,"clicks":2,"total":7,"impr":243},{"date":"2026-05-25","format":"Static","pillar":"Institutional Thought Leadership","likes":5,"comments":1,"reposts":0,"clicks":13,"total":19,"impr":1035},{"date":"2026-04-29","format":"Carousel","pillar":"SenseAI IP Launch","likes":6,"comments":0,"reposts":0,"clicks":168,"total":174,"impr":672},{"date":"2026-04-28","format":"Static","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":5,"total":9,"impr":510},{"date":"2026-04-27","format":"Static","pillar":"Ecosystem Participation","likes":6,"comments":0,"reposts":0,"clicks":20,"total":26,"impr":474},{"date":"2026-04-27","format":"Static","pillar":"SenseAI IP Launch","likes":5,"comments":0,"reposts":0,"clicks":5,"total":10,"impr":279},{"date":"2026-04-25","format":"Static","pillar":"Ecosystem Participation","likes":8,"comments":0,"reposts":0,"clicks":9,"total":17,"impr":457},{"date":"2026-04-23","format":"Video","pillar":"Ecosystem Participation","likes":9,"comments":0,"reposts":0,"clicks":29,"total":38,"impr":569},{"date":"2026-04-22","format":"Carousel","pillar":"SenseAI IP Launch","likes":3,"comments":0,"reposts":0,"clicks":72,"total":75,"impr":322},{"date":"2026-04-22","format":"Repost","pillar":"Ecosystem Participation","likes":6,"comments":0,"reposts":0,"clicks":9,"total":15,"impr":198},{"date":"2026-04-21","format":"Static","pillar":"SenseAI IP Launch","likes":13,"comments":0,"reposts":0,"clicks":11,"total":24,"impr":403},{"date":"2026-04-20","format":"Static","pillar":"SenseAI IP Launch","likes":5,"comments":1,"reposts":0,"clicks":57,"total":63,"impr":246},{"date":"2026-04-13","format":"Static","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":11,"total":16,"impr":685},{"date":"2026-04-13","format":"Static","pillar":"SenseAI IP Launch","likes":8,"comments":1,"reposts":0,"clicks":26,"total":35,"impr":1114},{"date":"2026-04-10","format":"Static","pillar":"SenseAI IP Launch","likes":7,"comments":0,"reposts":1,"clicks":22,"total":30,"impr":725},{"date":"2026-04-09","format":"Static","pillar":"SenseAI IP Launch","likes":3,"comments":0,"reposts":0,"clicks":10,"total":13,"impr":559},{"date":"2026-04-09","format":"Static","pillar":"SenseAI IP Launch","likes":103,"comments":3,"reposts":0,"clicks":2465,"total":2571,"impr":4767},{"date":"2026-04-09","format":"Static","pillar":"SenseAI IP Launch","likes":6,"comments":0,"reposts":0,"clicks":12,"total":18,"impr":730},{"date":"2026-04-09","format":"Repost","pillar":"Ecosystem Participation","likes":2,"comments":0,"reposts":0,"clicks":40,"total":42,"impr":478},{"date":"2026-04-08","format":"Static","pillar":"Ecosystem Participation","likes":4,"comments":1,"reposts":0,"clicks":6,"total":11,"impr":439},{"date":"2026-04-08","format":"Carousel","pillar":"SenseAI IP Launch","likes":13,"comments":0,"reposts":3,"clicks":226,"total":242,"impr":558},{"date":"2026-04-07","format":"Static","pillar":"SenseAI IP Launch","likes":6,"comments":0,"reposts":0,"clicks":1,"total":7,"impr":346},{"date":"2026-04-04","format":"Static","pillar":"Community Building","likes":24,"comments":1,"reposts":3,"clicks":196,"total":224,"impr":3623},{"date":"2026-03-30","format":"Static","pillar":"Institutional Thought Leadership","likes":2,"comments":0,"reposts":0,"clicks":13,"total":15,"impr":921},{"date":"2026-03-27","format":"Repost","pillar":"Ecosystem Participation","likes":5,"comments":0,"reposts":1,"clicks":19,"total":25,"impr":376},{"date":"2026-03-27","format":"Video","pillar":"Community Building","likes":5,"comments":0,"reposts":0,"clicks":10,"total":15,"impr":305},{"date":"2026-03-26","format":"Repost","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":11,"total":15,"impr":274},{"date":"2026-03-24","format":"Static","pillar":"Institutional Thought Leadership","likes":12,"comments":0,"reposts":0,"clicks":20,"total":32,"impr":671},{"date":"2026-03-24","format":"Repost","pillar":"Ecosystem Participation","likes":5,"comments":0,"reposts":0,"clicks":4,"total":9,"impr":284},{"date":"2026-03-23","format":"Carousel","pillar":"Institutional Thought Leadership","likes":3,"comments":0,"reposts":0,"clicks":68,"total":71,"impr":280},{"date":"2026-03-19","format":"Static","pillar":"Community Building","likes":6,"comments":0,"reposts":0,"clicks":19,"total":25,"impr":456},{"date":"2026-03-19","format":"Static","pillar":"Ecosystem Participation","likes":13,"comments":0,"reposts":0,"clicks":49,"total":62,"impr":378},{"date":"2026-03-18","format":"Static","pillar":"Institutional Thought Leadership","likes":1,"comments":0,"reposts":0,"clicks":4,"total":5,"impr":254},{"date":"2026-03-08","format":"Static","pillar":"Community Building","likes":3,"comments":0,"reposts":0,"clicks":82,"total":85,"impr":176},{"date":"2026-02-27","format":"Static","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":5,"total":9,"impr":242},{"date":"2026-02-24","format":"Static","pillar":"Ecosystem Participation","likes":3,"comments":0,"reposts":0,"clicks":89,"total":92,"impr":1007},{"date":"2026-02-24","format":"Carousel","pillar":"Portfolio Storytelling","likes":10,"comments":0,"reposts":1,"clicks":140,"total":151,"impr":519},{"date":"2026-02-23","format":"Static","pillar":"Ecosystem Participation","likes":4,"comments":1,"reposts":0,"clicks":46,"total":51,"impr":623},{"date":"2026-02-13","format":"Static","pillar":"Institutional Thought Leadership","likes":3,"comments":0,"reposts":0,"clicks":4,"total":7,"impr":235},{"date":"2026-02-06","format":"Static","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":10,"total":14,"impr":261},{"date":"2026-02-02","format":"Static","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":11,"total":15,"impr":379},{"date":"2026-01-30","format":"Static","pillar":"Ecosystem Participation","likes":3,"comments":0,"reposts":0,"clicks":1,"total":4,"impr":261},{"date":"2026-01-30","format":"Static","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":12,"total":16,"impr":494},{"date":"2026-01-28","format":"Static","pillar":"Ecosystem Participation","likes":5,"comments":0,"reposts":1,"clicks":13,"total":19,"impr":408},{"date":"2026-01-28","format":"Carousel","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":92,"total":96,"impr":289},{"date":"2026-01-26","format":"Static","pillar":"Community Building","likes":4,"comments":0,"reposts":0,"clicks":4,"total":8,"impr":217},{"date":"2026-01-23","format":"Repost","pillar":"Portfolio Storytelling","likes":4,"comments":0,"reposts":0,"clicks":6,"total":10,"impr":291},{"date":"2026-01-21","format":"Static","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":14,"total":19,"impr":403},{"date":"2026-01-14","format":"Repost","pillar":"Institutional Thought Leadership","likes":18,"comments":0,"reposts":0,"clicks":317,"total":335,"impr":828},{"date":"2026-01-13","format":"Static","pillar":"Ecosystem Participation","likes":7,"comments":0,"reposts":0,"clicks":12,"total":19,"impr":513},{"date":"2026-01-08","format":"Static","pillar":"Institutional Thought Leadership","likes":7,"comments":0,"reposts":0,"clicks":18,"total":25,"impr":625},{"date":"2026-01-08","format":"Video","pillar":"Ecosystem Participation","likes":10,"comments":0,"reposts":0,"clicks":33,"total":43,"impr":621},{"date":"2026-01-07","format":"Carousel","pillar":"Portfolio Storytelling","likes":24,"comments":0,"reposts":0,"clicks":707,"total":731,"impr":1110},{"date":"2025-12-30","format":"Static","pillar":"Community Building","likes":19,"comments":1,"reposts":0,"clicks":257,"total":277,"impr":3066},{"date":"2025-12-24","format":"Static","pillar":"Community Building","likes":9,"comments":0,"reposts":0,"clicks":21,"total":30,"impr":480},{"date":"2025-12-22","format":"Video","pillar":"Ecosystem Participation","likes":6,"comments":1,"reposts":0,"clicks":27,"total":34,"impr":549},{"date":"2025-12-11","format":"Static","pillar":"Community Building","likes":7,"comments":0,"reposts":0,"clicks":9,"total":16,"impr":463},{"date":"2025-12-04","format":"Video","pillar":"Opinionated AI POV","likes":6,"comments":0,"reposts":0,"clicks":30,"total":36,"impr":449},{"date":"2025-12-02","format":"Static","pillar":"Community Building","likes":5,"comments":0,"reposts":1,"clicks":112,"total":118,"impr":495},{"date":"2025-12-01","format":"Video","pillar":"Opinionated AI POV","likes":8,"comments":0,"reposts":0,"clicks":35,"total":43,"impr":554},{"date":"2025-11-21","format":"Video","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":11,"total":16,"impr":379},{"date":"2025-11-14","format":"Static","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":8,"total":13,"impr":392},{"date":"2025-11-12","format":"Video","pillar":"Ecosystem Participation","likes":8,"comments":0,"reposts":0,"clicks":12,"total":20,"impr":555},{"date":"2025-11-11","format":"Static","pillar":"Institutional Thought Leadership","likes":6,"comments":0,"reposts":0,"clicks":4,"total":10,"impr":374},{"date":"2025-11-06","format":"Video","pillar":"Opinionated AI POV","likes":2,"comments":0,"reposts":0,"clicks":4,"total":6,"impr":322},{"date":"2025-11-04","format":"Video","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":4,"total":9,"impr":359},{"date":"2025-10-31","format":"Static","pillar":"Community Building","likes":11,"comments":0,"reposts":0,"clicks":10,"total":21,"impr":433},{"date":"2025-10-27","format":"Video","pillar":"Opinionated AI POV","likes":8,"comments":0,"reposts":0,"clicks":6,"total":14,"impr":416},{"date":"2025-10-22","format":"Video","pillar":"Opinionated AI POV","likes":3,"comments":0,"reposts":0,"clicks":6,"total":9,"impr":451},{"date":"2025-10-10","format":"Static","pillar":"Community Building","likes":2,"comments":0,"reposts":0,"clicks":7,"total":9,"impr":354},{"date":"2025-10-06","format":"Repost","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":3,"total":7,"impr":336},{"date":"2025-10-06","format":"Carousel","pillar":"Ecosystem Participation","likes":4,"comments":1,"reposts":0,"clicks":267,"total":272,"impr":488},{"date":"2025-10-03","format":"Static","pillar":"Ecosystem Participation","likes":6,"comments":0,"reposts":0,"clicks":29,"total":35,"impr":412},{"date":"2025-10-01","format":"Repost","pillar":"Ecosystem Participation","likes":1,"comments":0,"reposts":0,"clicks":8,"total":9,"impr":281},{"date":"2025-09-29","format":"Video","pillar":"Portfolio Storytelling","likes":31,"comments":0,"reposts":1,"clicks":58,"total":90,"impr":1166},{"date":"2025-09-29","format":"Repost","pillar":"Ecosystem Participation","likes":3,"comments":0,"reposts":0,"clicks":105,"total":108,"impr":312},{"date":"2025-09-26","format":"Static","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":21,"total":25,"impr":346},{"date":"2025-09-26","format":"Static","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":21,"total":26,"impr":471},{"date":"2025-09-22","format":"Repost","pillar":"Ecosystem Participation","likes":8,"comments":0,"reposts":0,"clicks":105,"total":113,"impr":412},{"date":"2025-09-19","format":"Static","pillar":"Institutional Thought Leadership","likes":3,"comments":1,"reposts":0,"clicks":27,"total":31,"impr":518},{"date":"2025-09-16","format":"Video","pillar":"Portfolio Storytelling","likes":27,"comments":0,"reposts":1,"clicks":41,"total":69,"impr":770},{"date":"2025-09-10","format":"Video","pillar":"Portfolio Storytelling","likes":9,"comments":0,"reposts":0,"clicks":24,"total":33,"impr":539},{"date":"2025-09-01","format":"Video","pillar":"Ecosystem Participation","likes":20,"comments":0,"reposts":1,"clicks":55,"total":76,"impr":972},{"date":"2025-08-25","format":"Repost","pillar":"Portfolio Storytelling","likes":6,"comments":0,"reposts":0,"clicks":19,"total":25,"impr":438},{"date":"2025-08-22","format":"Video","pillar":"Ecosystem Participation","likes":13,"comments":0,"reposts":0,"clicks":32,"total":45,"impr":538},{"date":"2025-08-20","format":"Static","pillar":"Institutional Thought Leadership","likes":10,"comments":0,"reposts":0,"clicks":140,"total":150,"impr":543},{"date":"2025-08-18","format":"Video","pillar":"Institutional Thought Leadership","likes":8,"comments":0,"reposts":0,"clicks":39,"total":47,"impr":2143},{"date":"2025-08-13","format":"Static","pillar":"Ecosystem Participation","likes":30,"comments":1,"reposts":0,"clicks":932,"total":963,"impr":1049},{"date":"2025-08-13","format":"Static","pillar":"Portfolio Storytelling","likes":4,"comments":0,"reposts":0,"clicks":17,"total":21,"impr":385},{"date":"2025-08-12","format":"Static","pillar":"Portfolio Storytelling","likes":48,"comments":0,"reposts":1,"clicks":157,"total":206,"impr":2602},{"date":"2025-08-11","format":"Carousel","pillar":"Ecosystem Participation","likes":10,"comments":0,"reposts":1,"clicks":226,"total":237,"impr":807},{"date":"2025-08-06","format":"Static","pillar":"Ecosystem Participation","likes":32,"comments":0,"reposts":1,"clicks":98,"total":131,"impr":823},{"date":"2025-08-03","format":"Static","pillar":"Ecosystem Participation","likes":5,"comments":0,"reposts":0,"clicks":20,"total":25,"impr":386},{"date":"2025-07-31","format":"Video","pillar":"Institutional Thought Leadership","likes":6,"comments":0,"reposts":0,"clicks":15,"total":21,"impr":362},{"date":"2025-07-29","format":"Video","pillar":"Portfolio Storytelling","likes":45,"comments":0,"reposts":2,"clicks":53,"total":100,"impr":759},{"date":"2025-07-24","format":"Video","pillar":"Institutional Thought Leadership","likes":2,"comments":0,"reposts":0,"clicks":3,"total":5,"impr":263},{"date":"2025-07-22","format":"Video","pillar":"Opinionated AI POV","likes":5,"comments":0,"reposts":0,"clicks":22,"total":27,"impr":403},{"date":"2025-07-18","format":"Video","pillar":"Institutional Thought Leadership","likes":2,"comments":0,"reposts":0,"clicks":5,"total":7,"impr":263},{"date":"2025-07-16","format":"Repost","pillar":"Portfolio Storytelling","likes":8,"comments":0,"reposts":0,"clicks":31,"total":39,"impr":444},{"date":"2025-07-15","format":"Video","pillar":"Institutional Thought Leadership","likes":7,"comments":0,"reposts":0,"clicks":22,"total":29,"impr":339},{"date":"2025-07-10","format":"Video","pillar":"Institutional Thought Leadership","likes":1,"comments":0,"reposts":0,"clicks":10,"total":11,"impr":263},{"date":"2025-07-10","format":"Static","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":6,"total":10,"impr":204},{"date":"2025-07-07","format":"Carousel","pillar":"Portfolio Storytelling","likes":15,"comments":1,"reposts":1,"clicks":387,"total":404,"impr":706},{"date":"2025-07-03","format":"Static","pillar":"Institutional Thought Leadership","likes":6,"comments":0,"reposts":0,"clicks":29,"total":35,"impr":452},{"date":"2025-06-27","format":"Repost","pillar":"Portfolio Storytelling","likes":8,"comments":0,"reposts":0,"clicks":46,"total":54,"impr":212},{"date":"2025-06-27","format":"Repost","pillar":"Ecosystem Participation","likes":11,"comments":0,"reposts":0,"clicks":12,"total":23,"impr":321},{"date":"2025-06-26","format":"Video","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":13,"total":17,"impr":303},{"date":"2025-06-26","format":"Video","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":5,"total":10,"impr":234},{"date":"2025-06-23","format":"Video","pillar":"Institutional Thought Leadership","likes":18,"comments":0,"reposts":0,"clicks":19,"total":37,"impr":477},{"date":"2025-06-18","format":"Static","pillar":"Institutional Thought Leadership","likes":9,"comments":0,"reposts":0,"clicks":15,"total":24,"impr":435},{"date":"2025-06-16","format":"Video","pillar":"Institutional Thought Leadership","likes":7,"comments":0,"reposts":0,"clicks":35,"total":42,"impr":540},{"date":"2025-06-13","format":"Video","pillar":"Institutional Thought Leadership","likes":46,"comments":2,"reposts":1,"clicks":41,"total":90,"impr":962},{"date":"2025-06-09","format":"Video","pillar":"Institutional Thought Leadership","likes":21,"comments":0,"reposts":0,"clicks":45,"total":66,"impr":699},{"date":"2025-06-06","format":"Video","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":4,"total":8,"impr":295},{"date":"2025-06-04","format":"Carousel","pillar":"Portfolio Storytelling","likes":22,"comments":0,"reposts":2,"clicks":771,"total":795,"impr":1449},{"date":"2025-06-02","format":"Repost","pillar":"Ecosystem Participation","likes":3,"comments":0,"reposts":0,"clicks":49,"total":52,"impr":250},{"date":"2025-05-30","format":"Video","pillar":"Portfolio Storytelling","likes":30,"comments":1,"reposts":1,"clicks":88,"total":120,"impr":1800},{"date":"2025-05-30","format":"Static","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":10,"total":15,"impr":302},{"date":"2025-05-29","format":"Static","pillar":"Portfolio Storytelling","likes":37,"comments":0,"reposts":2,"clicks":142,"total":181,"impr":2320},{"date":"2025-05-29","format":"Repost","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":29,"total":33,"impr":362},{"date":"2025-05-28","format":"Video","pillar":"Portfolio Storytelling","likes":84,"comments":3,"reposts":2,"clicks":229,"total":318,"impr":3387},{"date":"2025-05-27","format":"Static","pillar":"Portfolio Storytelling","likes":46,"comments":1,"reposts":1,"clicks":188,"total":236,"impr":2659},{"date":"2025-05-27","format":"Static","pillar":"Portfolio Storytelling","likes":4,"comments":0,"reposts":0,"clicks":8,"total":12,"impr":267},{"date":"2025-05-23","format":"Carousel","pillar":"Institutional Thought Leadership","likes":9,"comments":0,"reposts":0,"clicks":283,"total":292,"impr":575},{"date":"2025-05-21","format":"Static","pillar":"Ecosystem Participation","likes":7,"comments":0,"reposts":0,"clicks":8,"total":15,"impr":293},{"date":"2025-05-21","format":"Video","pillar":"Portfolio Storytelling","likes":23,"comments":1,"reposts":0,"clicks":30,"total":54,"impr":557},{"date":"2025-05-20","format":"Repost","pillar":"Institutional Thought Leadership","likes":4,"comments":2,"reposts":0,"clicks":88,"total":94,"impr":249},{"date":"2025-05-19","format":"Repost","pillar":"Portfolio Storytelling","likes":31,"comments":3,"reposts":0,"clicks":64,"total":98,"impr":832},{"date":"2025-05-15","format":"Carousel","pillar":"Institutional Thought Leadership","likes":3,"comments":0,"reposts":0,"clicks":248,"total":251,"impr":617},{"date":"2025-05-08","format":"Repost","pillar":"Portfolio Storytelling","likes":10,"comments":0,"reposts":1,"clicks":39,"total":50,"impr":742},{"date":"2025-05-06","format":"Repost","pillar":"Institutional Thought Leadership","likes":3,"comments":0,"reposts":0,"clicks":10,"total":13,"impr":303},{"date":"2025-05-06","format":"Video","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":0,"clicks":14,"total":19,"impr":452},{"date":"2025-05-02","format":"Static","pillar":"Institutional Thought Leadership","likes":5,"comments":0,"reposts":1,"clicks":22,"total":28,"impr":833},{"date":"2025-05-01","format":"Static","pillar":"Institutional Thought Leadership","likes":3,"comments":0,"reposts":0,"clicks":12,"total":15,"impr":357},{"date":"2025-04-24","format":"Repost","pillar":"Institutional Thought Leadership","likes":3,"comments":0,"reposts":0,"clicks":0,"total":3,"impr":195},{"date":"2025-04-24","format":"Repost","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":62,"total":66,"impr":253},{"date":"2025-04-24","format":"Video","pillar":"Institutional Thought Leadership","likes":10,"comments":0,"reposts":0,"clicks":27,"total":37,"impr":478},{"date":"2025-04-17","format":"Repost","pillar":"Institutional Thought Leadership","likes":1,"comments":0,"reposts":0,"clicks":3,"total":4,"impr":217},{"date":"2025-04-17","format":"Static","pillar":"Opinionated AI POV","likes":6,"comments":1,"reposts":0,"clicks":23,"total":30,"impr":508},{"date":"2025-04-10","format":"Static","pillar":"Institutional Thought Leadership","likes":8,"comments":0,"reposts":0,"clicks":10,"total":18,"impr":353},{"date":"2025-04-07","format":"Repost","pillar":"Portfolio Storytelling","likes":21,"comments":0,"reposts":1,"clicks":69,"total":91,"impr":1179},{"date":"2025-04-01","format":"Carousel","pillar":"Institutional Thought Leadership","likes":3,"comments":0,"reposts":0,"clicks":124,"total":127,"impr":364},{"date":"2025-03-31","format":"Repost","pillar":"Portfolio Storytelling","likes":4,"comments":0,"reposts":0,"clicks":110,"total":114,"impr":235},{"date":"2025-03-31","format":"Static","pillar":"Institutional Thought Leadership","likes":20,"comments":0,"reposts":0,"clicks":35,"total":55,"impr":714},{"date":"2025-03-27","format":"Static","pillar":"Institutional Thought Leadership","likes":1,"comments":0,"reposts":0,"clicks":4,"total":5,"impr":276},{"date":"2025-03-26","format":"Static","pillar":"Portfolio Storytelling","likes":43,"comments":6,"reposts":2,"clicks":191,"total":242,"impr":3114},{"date":"2025-03-26","format":"Video","pillar":"Institutional Thought Leadership","likes":2,"comments":0,"reposts":0,"clicks":3,"total":5,"impr":185},{"date":"2025-03-25","format":"Static","pillar":"Institutional Thought Leadership","likes":0,"comments":0,"reposts":0,"clicks":3,"total":3,"impr":154},{"date":"2025-03-25","format":"Carousel","pillar":"Portfolio Storytelling","likes":1,"comments":0,"reposts":0,"clicks":27,"total":28,"impr":195},{"date":"2025-03-19","format":"Carousel","pillar":"Portfolio Storytelling","likes":18,"comments":0,"reposts":1,"clicks":457,"total":476,"impr":900},{"date":"2025-03-19","format":"Static","pillar":"Institutional Thought Leadership","likes":12,"comments":0,"reposts":2,"clicks":25,"total":39,"impr":664},{"date":"2025-03-13","format":"Static","pillar":"Portfolio Storytelling","likes":8,"comments":0,"reposts":0,"clicks":43,"total":51,"impr":230},{"date":"2025-03-11","format":"Static","pillar":"Ecosystem Participation","likes":1,"comments":1,"reposts":0,"clicks":2,"total":4,"impr":139},{"date":"2025-03-11","format":"Repost","pillar":"Portfolio Storytelling","likes":0,"comments":0,"reposts":0,"clicks":9,"total":9,"impr":207},{"date":"2025-03-07","format":"Carousel","pillar":"Institutional Thought Leadership","likes":4,"comments":0,"reposts":0,"clicks":143,"total":147,"impr":277},{"date":"2025-03-07","format":"Repost","pillar":"Ecosystem Participation","likes":1,"comments":0,"reposts":0,"clicks":11,"total":12,"impr":247},{"date":"2025-03-04","format":"Repost","pillar":"Portfolio Storytelling","likes":11,"comments":0,"reposts":1,"clicks":24,"total":36,"impr":622},{"date":"2025-03-04","format":"Carousel","pillar":"Opinionated AI POV","likes":6,"comments":0,"reposts":0,"clicks":36,"total":42,"impr":243},{"date":"2025-02-28","format":"Video","pillar":"Ecosystem Participation","likes":0,"comments":0,"reposts":0,"clicks":2,"total":2,"impr":157},{"date":"2025-02-25","format":"Static","pillar":"Ecosystem Participation","likes":2,"comments":0,"reposts":0,"clicks":4,"total":6,"impr":143},{"date":"2025-02-21","format":"Static","pillar":"Ecosystem Participation","likes":7,"comments":0,"reposts":0,"clicks":6,"total":13,"impr":2143},{"date":"2025-02-19","format":"Carousel","pillar":"Ecosystem Participation","likes":4,"comments":0,"reposts":0,"clicks":156,"total":160,"impr":379},{"date":"2025-02-12","format":"Repost","pillar":"Ecosystem Participation","likes":1,"comments":0,"reposts":0,"clicks":21,"total":22,"impr":134},{"date":"2025-02-10","format":"Static","pillar":"Ecosystem Participation","likes":21,"comments":1,"reposts":2,"clicks":52,"total":76,"impr":2143},{"date":"2025-02-10","format":"Repost","pillar":"Institutional Thought Leadership","likes":0,"comments":0,"reposts":0,"clicks":0,"total":0,"impr":2143},{"date":"2025-02-05","format":"Static","pillar":"Ecosystem Participation","likes":1,"comments":0,"reposts":0,"clicks":13,"total":14,"impr":356},{"date":"2025-02-04","format":"Carousel","pillar":"Portfolio Storytelling","likes":14,"comments":0,"reposts":2,"clicks":433,"total":449,"impr":2143},{"date":"2025-02-04","format":"Repost","pillar":"Portfolio Storytelling","likes":55,"comments":1,"reposts":0,"clicks":179,"total":235,"impr":2051}];</script>
+<script>
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#6B6478';
+Chart.defaults.borderColor = '#E6E1F5';
+const VIOLET='#5B3FE0', TEAL='#00B8A2', GOLD='#F0A93E', CORAL='#EF6461', PURP2='#8B5CF6';
+const FMT_COLOR = {Static:VIOLET, Video:GOLD, Carousel:TEAL, Repost:CORAL, Document:PURP2};
+const PILLAR_COLORS = [VIOLET, TEAL, GOLD, PURP2, CORAL, '#4C9F70', '#B85C9E', '#3E7CB1'];
+
+RAW.forEach(p=>{
+  p.dateObj = new Date(p.date+'T00:00:00');
+  p.weekday = p.dateObj.toLocaleDateString('en-US',{weekday:'long'});
+});
+const MIN_DATE = new Date(Math.min(...RAW.map(p=>p.dateObj)));
+const MAX_DATE = new Date(Math.max(...RAW.map(p=>p.dateObj)));
+
+let chartRefs = {};
+function destroyCharts(){ Object.values(chartRefs).forEach(c=>c && c.destroy()); chartRefs = {}; }
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function fmtDateHuman(d){ return d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'}); }
+function pct(n){ return Math.round(n*100)/100; }
+function filterPosts(from, to){ return RAW.filter(p => p.dateObj >= from && p.dateObj <= to); }
+function groupBy(arr, keyFn){ const m={}; arr.forEach(p=>{ const k=keyFn(p); (m[k]=m[k]||[]).push(p); }); return m; }
+
+function renderAll(from, to){
+  const posts = filterPosts(from, to);
+  document.getElementById('rangeSummary').innerHTML = posts.length
+    ? `Showing <b>${posts.length}</b> posts · ${fmtDateHuman(from)} → ${fmtDateHuman(to)}`
+    : `No posts in this range · ${fmtDateHuman(from)} → ${fmtDateHuman(to)}`;
+  destroyCharts();
+
+  const totalEng = posts.reduce((s,p)=>s+p.total,0);
+  const totalImpr = posts.reduce((s,p)=>s+p.impr,0);
+  const likes = posts.reduce((s,p)=>s+p.likes,0);
+  const comments = posts.reduce((s,p)=>s+p.comments,0);
+  const overallER = totalImpr ? pct(totalEng/totalImpr*100) : 0;
+  const k = v => v>=1000 ? (v/1000).toFixed(1)+'K' : v;
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card"><div class="label">Number of Posts</div><div class="value">${posts.length}</div></div>
+    <div class="kpi-card"><div class="label">Total Engagement</div><div class="value">${k(totalEng)}</div></div>
+    <div class="kpi-card"><div class="label">Impressions</div><div class="value">${k(totalImpr)}</div></div>
+    <div class="kpi-card"><div class="label">Likes</div><div class="value">${k(likes)}</div></div>
+    <div class="kpi-card"><div class="label">Comments</div><div class="value">${comments}</div></div>
+    <div class="kpi-card"><div class="label">Overall ER</div><div class="value">${overallER}<span>%</span></div></div>
+  `;
+
+  if(!posts.length){
+    ['formatMixChart','erByFormatChart','pillarMixChart','erByPillarChart','engagementTypeChart','efficiencyChart'].forEach(id=>{
+      document.getElementById(id).parentElement.innerHTML = '<div class="empty-state">No posts in this date range.</div>';
+    });
+    document.getElementById('comboTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#9891A8;">No data</td></tr>';
+    document.getElementById('heatmapTable').innerHTML = '';
+    return;
+  }
+
+  const byFormat = groupBy(posts, p=>p.format);
+  const formats = Object.keys(byFormat);
+  const formatCounts = formats.map(f=>byFormat[f].length);
+  const formatER = formats.map(f=>{
+    const e = byFormat[f].reduce((s,p)=>s+p.total,0);
+    const i = byFormat[f].reduce((s,p)=>s+p.impr,0);
+    return pct(i? e/i*100 : 0);
+  });
+  document.getElementById('formatMixDesc').textContent = `Share of ${posts.length} posts by format`;
+  chartRefs.formatMix = new Chart(document.getElementById('formatMixChart'), {
+    type:'doughnut',
+    data:{ labels:formats, datasets:[{ data:formatCounts, backgroundColor:formats.map(f=>FMT_COLOR[f]||'#ccc'), borderColor:'#fff', borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{position:'right', labels:{boxWidth:10,padding:14,font:{size:11.5}}}, tooltip:{ callbacks:{ label:c=>`${c.label}: ${c.parsed} posts` } } } }
+  });
+  const sortedFmt = formats.map((f,i)=>({f, er:formatER[i]})).sort((a,b)=>b.er-a.er);
+  chartRefs.erByFormat = new Chart(document.getElementById('erByFormatChart'), {
+    type:'bar',
+    data:{ labels:sortedFmt.map(x=>x.f), datasets:[{ data:sortedFmt.map(x=>x.er), backgroundColor:sortedFmt.map(x=>FMT_COLOR[x.f]||'#ccc'), borderRadius:6, maxBarThickness:46 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`ER: ${c.parsed.y}%`}}},
+      scales:{ y:{ticks:{callback:v=>v+'%'},grid:{color:'#F1EEFA'}}, x:{grid:{display:false}} } }
+  });
+
+  const byPillar = groupBy(posts, p=>p.pillar);
+  const pillars = Object.keys(byPillar);
+  const pillarCounts = pillars.map(pl=>byPillar[pl].length);
+  const pillarER = pillars.map(pl=>{
+    const e = byPillar[pl].reduce((s,p)=>s+p.total,0);
+    const i = byPillar[pl].reduce((s,p)=>s+p.impr,0);
+    return pct(i? e/i*100 : 0);
+  });
+  document.getElementById('pillarMixDesc').textContent = `Share of ${posts.length} posts by content pillar`;
+  chartRefs.pillarMix = new Chart(document.getElementById('pillarMixChart'), {
+    type:'doughnut',
+    data:{ labels:pillars, datasets:[{ data:pillarCounts, backgroundColor:pillars.map((_,i)=>PILLAR_COLORS[i%PILLAR_COLORS.length]), borderColor:'#fff', borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{position:'right', labels:{boxWidth:10,padding:8,font:{size:10}}}, tooltip:{ callbacks:{ label:c=>`${c.label}: ${c.parsed} posts` } } } }
+  });
+  const sortedPillar = pillars.map((p,i)=>({p, er:pillarER[i]})).sort((a,b)=>b.er-a.er);
+  chartRefs.erByPillar = new Chart(document.getElementById('erByPillarChart'), {
+    type:'bar',
+    data:{ labels:sortedPillar.map(x=>x.p), datasets:[{ data:sortedPillar.map(x=>x.er), backgroundColor:VIOLET, borderRadius:6, maxBarThickness:34 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`ER: ${c.parsed.y}%`}}},
+      scales:{ y:{ticks:{callback:v=>v+'%'},grid:{color:'#F1EEFA'}}, x:{grid:{display:false}, ticks:{font:{size:8.5},maxRotation:40,minRotation:40}} } }
+  });
+
+  const byCombo = groupBy(posts, p=>p.format+'|||'+p.pillar);
+  const combos = Object.keys(byCombo).map(key=>{
+    const [format,pillar] = key.split('|||');
+    const arr = byCombo[key];
+    const e = arr.reduce((s,p)=>s+p.total,0);
+    const i = arr.reduce((s,p)=>s+p.impr,0);
+    return { format, pillar, er: pct(i? e/i*100:0), n: arr.length };
+  }).filter(c=>c.n>=1).sort((a,b)=>b.er-a.er).slice(0,8);
+  document.getElementById('comboTableBody').innerHTML = combos.map((c,idx)=>{
+    const erClass = c.er>=25 ? 'er-high' : c.er>=10 ? 'er-mid' : 'er-low';
+    return `<tr><td><span class="rank">${idx+1}</span></td><td>${c.format}</td><td>${c.pillar} <span style="color:#9891A8;font-size:11px;">(${c.n})</span></td><td style="text-align:right;"><span class="er-pill ${erClass}">${c.er}%</span></td></tr>`;
+  }).join('');
+
+  chartRefs.engType = new Chart(document.getElementById('engagementTypeChart'), {
+    type:'bar',
+    data:{ labels:formats, datasets:[
+      {label:'Likes', data:formats.map(f=>byFormat[f].reduce((s,p)=>s+p.likes,0)), backgroundColor:VIOLET, stack:'s'},
+      {label:'Comments', data:formats.map(f=>byFormat[f].reduce((s,p)=>s+p.comments,0)), backgroundColor:GOLD, stack:'s'},
+      {label:'Reposts', data:formats.map(f=>byFormat[f].reduce((s,p)=>s+p.reposts,0)), backgroundColor:CORAL, stack:'s'},
+      {label:'Clicks', data:formats.map(f=>byFormat[f].reduce((s,p)=>s+p.clicks,0)), backgroundColor:TEAL, stack:'s'},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{boxWidth:10,padding:10,font:{size:10.5}}} },
+      scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, grid:{color:'#F1EEFA'}} } }
+  });
+
+  const weekdayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const activeWeekdays = weekdayOrder.filter(d=>posts.some(p=>p.weekday===d));
+  let thead = '<thead><tr><th>Day</th>' + pillars.map(p=>`<th>${p.split(' ').slice(0,2).join(' ')}</th>`).join('') + '</tr></thead>';
+  let rows = '<tbody>';
+  activeWeekdays.forEach(day=>{
+    rows += `<tr><td class="daycell">${day}</td>`;
+    pillars.forEach(pl=>{
+      const cell = posts.filter(p=>p.weekday===day && p.pillar===pl);
+      if(!cell.length){ rows += `<td class="empty">–</td>`; return; }
+      const e = cell.reduce((s,p)=>s+p.total,0);
+      const i = cell.reduce((s,p)=>s+p.impr,0);
+      const er = pct(i? e/i*100:0);
+      const t = Math.min(er/60,1);
+      const alpha = 0.08 + t*0.75;
+      rows += `<td style="background:rgba(91,63,224,${alpha.toFixed(2)});color:${t>0.45?'#fff':'#3D2899'};">${er}%</td>`;
+    });
+    rows += '</tr>';
+  });
+  rows += '</tbody>';
+  document.getElementById('heatmapTable').innerHTML = thead + rows;
+
+  const byFmtBubbles = {};
+  posts.forEach(p=>{ (byFmtBubbles[p.format]=byFmtBubbles[p.format]||[]).push({x:p.impr, y: p.impr? pct(p.total/p.impr*100):0, r:Math.max(4,Math.min(22,Math.sqrt(p.total)*2.6))}); });
+  chartRefs.efficiency = new Chart(document.getElementById('efficiencyChart'), {
+    type:'bubble',
+    data:{ datasets: Object.keys(byFmtBubbles).map(f=>({ label:f, data:byFmtBubbles[f], backgroundColor:(FMT_COLOR[f]||'#ccc')+'B3', borderColor:FMT_COLOR[f]||'#ccc', borderWidth:1.5 })) },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`${c.dataset.label} · ER ${c.raw.y}% · ${c.raw.x} impr.` } } },
+      scales:{ x:{ title:{display:true,text:'Impressions',color:'#6B6478',font:{size:11}}, grid:{color:'#F1EEFA'} },
+        y:{ title:{display:true,text:'Engagement Rate (%)',color:'#6B6478',font:{size:11}}, ticks:{callback:v=>v+'%'}, grid:{color:'#F1EEFA'} } } }
+  });
+  document.getElementById('efficiencyLegend').innerHTML = formats.map(f=>`<div class="legend-item"><span class="legend-swatch" style="background:${FMT_COLOR[f]||'#ccc'};"></span>${f}</div>`).join('');
+}
+
+const presetBtns = document.querySelectorAll('.preset-btn');
+const dateFrom = document.getElementById('dateFrom');
+const dateTo = document.getElementById('dateTo');
+dateFrom.min = fmtDate(MIN_DATE); dateFrom.max = fmtDate(MAX_DATE);
+dateTo.min = fmtDate(MIN_DATE); dateTo.max = fmtDate(MAX_DATE);
+dateFrom.value = fmtDate(MIN_DATE); dateTo.value = fmtDate(MAX_DATE);
+
+function setActivePreset(btn){ presetBtns.forEach(b=>b.classList.remove('active')); if(btn) btn.classList.add('active'); }
+presetBtns.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    setActivePreset(btn);
+    const preset = btn.dataset.preset;
+    let from, to = new Date(MAX_DATE);
+    if(preset==='all'){ from = new Date(MIN_DATE); }
+    else { from = new Date(MAX_DATE); from.setDate(from.getDate() - parseInt(preset)); }
+    dateFrom.value = fmtDate(from); dateTo.value = fmtDate(to);
+    renderAll(from, to);
+  });
+});
+document.getElementById('applyCustom').addEventListener('click', ()=>{
+  setActivePreset(null);
+  const from = new Date(dateFrom.value+'T00:00:00');
+  const to = new Date(dateTo.value+'T23:59:59');
+  renderAll(from, to);
+});
+
+renderAll(MIN_DATE, MAX_DATE);
+</script>
+</body>
+</html>
